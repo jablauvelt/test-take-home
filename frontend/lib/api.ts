@@ -62,6 +62,33 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ??
   "http://localhost:8000";
 
+type ApiValidationDetail = {
+  loc?: Array<string | number>;
+  msg?: string;
+};
+
+function formatApiError(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object" || !("detail" in body)) {
+    return fallback;
+  }
+
+  const detail = (body as { detail: unknown }).detail;
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item: ApiValidationDetail) => {
+        const field = item.loc?.filter((part) => part !== "body").join(".");
+        return field ? `${field}: ${item.msg ?? "Invalid value"}` : item.msg ?? "Invalid value";
+      })
+      .join("; ");
+  }
+
+  return fallback;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -76,7 +103,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let message = `${response.status} ${response.statusText}`;
     try {
       const body = await response.json();
-      message = body.detail ?? message;
+      message = formatApiError(body, message);
     } catch {
       // Keep the status text when the response is not JSON.
     }
