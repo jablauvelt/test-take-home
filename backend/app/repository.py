@@ -8,6 +8,8 @@ from supabase import Client, create_client
 from .backtester import Candle
 from .config import Settings
 
+PAGE_SIZE = 1000
+
 
 def get_supabase(settings: Settings) -> Client:
     if not settings.supabase_url or not settings.supabase_service_role_key:
@@ -18,6 +20,22 @@ def get_supabase(settings: Settings) -> Client:
 class Repository:
     def __init__(self, client: Client):
         self.client = client
+
+    def _execute_all(self, query: Any) -> List[Dict[str, Any]]:
+        rows: List[Dict[str, Any]] = []
+        start = 0
+        while True:
+            page = query.range(start, start + PAGE_SIZE - 1).execute().data
+            rows.extend(page)
+            if len(page) < PAGE_SIZE:
+                return rows
+            start += PAGE_SIZE
+
+    def _serialize_row(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            key: value.isoformat() if isinstance(value, datetime) else value
+            for key, value in row.items()
+        }
 
     def upsert_candles(self, rows: List[Dict[str, Any]]) -> int:
         if not rows:
@@ -30,15 +48,14 @@ class Repository:
         return len(rows)
 
     def candle_status(self, product_id: str = "BTC-USD", granularity: str = "ONE_HOUR") -> Dict[str, Any]:
-        result = (
+        rows = self._execute_all(
             self.client.table("candles")
             .select("time")
             .eq("product_id", product_id)
             .eq("granularity", granularity)
             .order("time")
-            .execute()
         )
-        times = [row["time"] for row in result.data]
+        times = [row["time"] for row in rows]
         return {
             "product_id": product_id,
             "granularity": granularity,
@@ -48,13 +65,12 @@ class Repository:
         }
 
     def list_candles(self, product_id: str = "BTC-USD", granularity: str = "ONE_HOUR") -> List[Candle]:
-        result = (
+        rows = self._execute_all(
             self.client.table("candles")
             .select("time,open,high,low,close,volume")
             .eq("product_id", product_id)
             .eq("granularity", granularity)
             .order("time")
-            .execute()
         )
         return [
             Candle(
@@ -65,7 +81,7 @@ class Repository:
                 close=float(row["close"]),
                 volume=float(row["volume"]),
             )
-            for row in result.data
+            for row in rows
         ]
 
     def create_experiment(
@@ -81,13 +97,16 @@ class Repository:
 
         if trades:
             self.client.table("trades").insert(
-                [{**trade, "experiment_id": experiment_id} for trade in trades]
+                [self._serialize_row({**trade, "experiment_id": experiment_id}) for trade in trades]
             ).execute()
 
         if equity_points:
             for index in range(0, len(equity_points), 500):
                 self.client.table("equity_points").insert(
-                    [{**point, "experiment_id": experiment_id} for point in equity_points[index : index + 500]]
+                    [
+                        self._serialize_row({**point, "experiment_id": experiment_id})
+                        for point in equity_points[index : index + 500]
+                    ]
                 ).execute()
 
         return experiment
@@ -106,21 +125,16 @@ class Repository:
         if experiment_result.data is None:
             return None
 
-        trades = (
+        trades = self._execute_all(
             self.client.table("trades")
             .select("*")
             .eq("experiment_id", experiment_id)
             .order("entry_time")
-            .execute()
-            .data
         )
-        equity_points = (
+        equity_points = self._execute_all(
             self.client.table("equity_points")
             .select("*")
             .eq("experiment_id", experiment_id)
             .order("time")
-            .execute()
-            .data
         )
         return {**experiment_result.data, "trades": trades, "equity_points": equity_points}
-
