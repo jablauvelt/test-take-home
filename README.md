@@ -4,7 +4,7 @@ A tiny internal-tool style backtesting app for BTC-USD moving-average crossover 
 
 ## What Works
 
-- Loads 1 year of hourly BTC-USD candles from Coinbase public market data.
+- Loads ~2 years of daily BTC-USD candles from Coinbase public market data.
 - Runs a long-only moving-average crossover strategy from the web UI.
 - Lets users configure fast SMA window, slow SMA window, initial cash, and fee bps.
 - Persists experiment summaries, trade-level results, and equity curves in Supabase.
@@ -45,7 +45,7 @@ Load data:
 ```bash
 curl -X POST http://localhost:8000/admin/load-data \
   -H "Content-Type: application/json" \
-  -d '{"product_id":"BTC-USD","granularity":"ONE_HOUR","days":365}'
+  -d '{"product_id":"BTC-USD","granularity":"ONE_DAY","days":730}'
 ```
 
 Frontend:
@@ -78,7 +78,7 @@ Recommended free deployment as one Vercel Services project:
 5. Add env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS`.
 6. Set `CORS_ORIGINS` to `https://your-project.vercel.app` after the first deployment URL exists.
 7. The backend is mounted at `/backend`; Vercel injects `NEXT_PUBLIC_BACKEND_URL=/backend` for the frontend.
-8. Call deployed `/backend/admin/load-data` once to preload Supabase before sharing the app.
+8. Call deployed `/backend/admin/load-data` once to preload Supabase before sharing the app. The default request loads 730 daily BTC-USD candles.
 
 For local development, keep using `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`.
 
@@ -90,7 +90,7 @@ The backend calls Coinbase's public Advanced Trade candles endpoint in chunks of
 
 The strategy is intentionally simple:
 
-- Compute fast and slow SMAs on hourly close prices.
+- Compute fast and slow SMAs on daily close prices.
 - Buy with all available cash when fast SMA crosses above slow SMA.
 - Sell the full position when fast SMA crosses below slow SMA.
 - Charge configurable fee bps on entries and exits.

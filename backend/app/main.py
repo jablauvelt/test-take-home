@@ -18,6 +18,8 @@ from .repository import Repository, get_supabase
 
 
 app = FastAPI(title="BTC-USD Backtesting API", version="0.1.0")
+DEFAULT_PRODUCT_ID = "BTC-USD"
+DEFAULT_GRANULARITY = "ONE_DAY"
 
 settings = get_settings()
 app.add_middleware(
@@ -68,7 +70,7 @@ def candle_status(repo: Repository = Depends(get_repo)) -> CandleStatus:
 
 @app.post("/experiments/run", response_model=ExperimentDetail)
 def run_experiment(payload: RunExperimentRequest, repo: Repository = Depends(get_repo)) -> ExperimentDetail:
-    candles = repo.list_candles()
+    candles = repo.list_candles(product_id=DEFAULT_PRODUCT_ID, granularity=DEFAULT_GRANULARITY)
     if not candles:
         raise HTTPException(status_code=400, detail="No candle data loaded. Run /admin/load-data first.")
 
@@ -85,8 +87,8 @@ def run_experiment(payload: RunExperimentRequest, repo: Repository = Depends(get
 
     experiment = repo.create_experiment(
         params={
-            "product_id": "BTC-USD",
-            "granularity": "ONE_HOUR",
+            "product_id": DEFAULT_PRODUCT_ID,
+            "granularity": DEFAULT_GRANULARITY,
             "fast_window": payload.fast_window,
             "slow_window": payload.slow_window,
             "initial_cash": payload.initial_cash,

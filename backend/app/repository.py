@@ -47,7 +47,7 @@ class Repository:
             ).execute()
         return len(rows)
 
-    def candle_status(self, product_id: str = "BTC-USD", granularity: str = "ONE_HOUR") -> Dict[str, Any]:
+    def candle_status(self, product_id: str = "BTC-USD", granularity: str = "ONE_DAY") -> Dict[str, Any]:
         rows = self._execute_all(
             self.client.table("candles")
             .select("time")
@@ -64,7 +64,7 @@ class Repository:
             "last_time": times[-1] if times else None,
         }
 
-    def list_candles(self, product_id: str = "BTC-USD", granularity: str = "ONE_HOUR") -> List[Candle]:
+    def list_candles(self, product_id: str = "BTC-USD", granularity: str = "ONE_DAY") -> List[Candle]:
         rows = self._execute_all(
             self.client.table("candles")
             .select("time,open,high,low,close,volume")

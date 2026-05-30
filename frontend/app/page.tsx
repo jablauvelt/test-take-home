@@ -125,11 +125,13 @@ export default function Home() {
     <main className="page">
       <section className="topbar">
         <div>
-          <p className="eyebrow">BTC-USD hourly backtesting</p>
+          <p className="eyebrow">BTC-USD daily backtesting</p>
           <h1>Moving-average experiment bench</h1>
         </div>
         <div className="status-box">
-          <span>{status?.candle_count ?? 0} candles</span>
+          <span>
+            {status?.candle_count ?? 0} {status?.granularity === "ONE_DAY" ? "daily" : status?.granularity ?? ""} candles
+          </span>
           <strong>{status ? `${formatDate(status.first_time)} to ${formatDate(status.last_time)}` : "Loading data status"}</strong>
         </div>
       </section>
@@ -322,4 +324,3 @@ export default function Home() {
     </main>
   );
 }
-

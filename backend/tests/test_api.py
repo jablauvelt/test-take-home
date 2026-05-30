@@ -12,7 +12,9 @@ class FakeRepo:
         self.trades = []
         self.equity_points = []
 
-    def list_candles(self):
+    def list_candles(self, product_id="BTC-USD", granularity="ONE_DAY"):
+        assert product_id == "BTC-USD"
+        assert granularity == "ONE_DAY"
         start = datetime(2025, 1, 1, tzinfo=timezone.utc)
         closes = [10, 9, 8, 9, 10, 11, 12, 11, 10, 9, 8]
         return [
@@ -30,7 +32,7 @@ class FakeRepo:
     def candle_status(self):
         return {
             "product_id": "BTC-USD",
-            "granularity": "ONE_HOUR",
+            "granularity": "ONE_DAY",
             "candle_count": 11,
             "first_time": "2025-01-01T00:00:00+00:00",
             "last_time": "2025-01-01T10:00:00+00:00",
@@ -129,12 +131,12 @@ def test_load_data_persists_fetched_candles(monkeypatch) -> None:
 
     async def fake_fetch_candles(product_id, granularity, days):
         assert product_id == "BTC-USD"
-        assert granularity == "ONE_HOUR"
-        assert days == 1
+        assert granularity == "ONE_DAY"
+        assert days == 730
         return [
             {
                 "product_id": "BTC-USD",
-                "granularity": "ONE_HOUR",
+                "granularity": "ONE_DAY",
                 "time": "2025-01-01T00:00:00+00:00",
                 "open": 1.0,
                 "high": 2.0,
@@ -148,10 +150,21 @@ def test_load_data_persists_fetched_candles(monkeypatch) -> None:
     app.dependency_overrides[get_repo] = lambda: fake_repo
     client = TestClient(app)
 
-    response = client.post("/admin/load-data", json={"days": 1})
+    response = client.post("/admin/load-data", json={})
 
     app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.json()["candles_upserted"] == 1
     assert fake_repo.loaded_rows[0]["close"] == 1.5
+
+
+def test_load_data_rejects_non_daily_granularity() -> None:
+    app.dependency_overrides[get_repo] = lambda: FakeRepo()
+    client = TestClient(app)
+
+    response = client.post("/admin/load-data", json={"granularity": "ONE_HOUR", "days": 730})
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 422

@@ -1,13 +1,13 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 
 class LoadDataRequest(BaseModel):
-    product_id: str = "BTC-USD"
-    granularity: str = "ONE_HOUR"
-    days: int = Field(default=365, ge=1, le=365)
+    product_id: Literal["BTC-USD"] = "BTC-USD"
+    granularity: Literal["ONE_DAY"] = "ONE_DAY"
+    days: int = Field(default=730, ge=1, le=1825)
 
 
 class LoadDataResponse(BaseModel):
@@ -20,7 +20,7 @@ class LoadDataResponse(BaseModel):
 
 class CandleStatus(BaseModel):
     product_id: str = "BTC-USD"
-    granularity: str = "ONE_HOUR"
+    granularity: str = "ONE_DAY"
     candle_count: int
     first_time: Optional[datetime] = None
     last_time: Optional[datetime] = None
@@ -81,4 +81,3 @@ class EquityPoint(BaseModel):
 class ExperimentDetail(ExperimentSummary):
     trades: List[Trade]
     equity_points: List[EquityPoint]
-
