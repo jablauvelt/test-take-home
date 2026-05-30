@@ -65,9 +65,9 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 ## Deployment
 
-Live frontend URL: `TODO after Vercel deploy`
+Live frontend URL: `https://test-take-home-kappa.vercel.app`
 
-Live backend/API URL: `TODO after Vercel deploy`
+Live backend/API URL: `https://test-take-home-kappa.vercel.app/backend`
 
 Recommended free deployment as one Vercel Services project:
 
