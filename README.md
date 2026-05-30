@@ -69,20 +69,18 @@ Live frontend URL: `TODO after Vercel deploy`
 
 Live backend/API URL: `TODO after Vercel deploy`
 
-Recommended free deployment:
+Recommended free deployment as one Vercel Services project:
 
 1. Push this repo to GitHub.
 2. Create a Supabase project and run `supabase/schema.sql`.
-3. Create a Vercel project for `backend/`.
-   - Framework preset: Other.
-   - Root directory: `backend`.
-   - Env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS`.
-4. Create a Vercel project for `frontend/`.
-   - Framework preset: Next.js.
-   - Root directory: `frontend`.
-   - Env var: `NEXT_PUBLIC_API_BASE_URL=https://your-backend.vercel.app`.
-5. Update backend `CORS_ORIGINS` to include the deployed frontend URL.
-6. Call deployed `/admin/load-data` once to preload Supabase before sharing the app.
+3. Create one Vercel project from the repo using the Services framework.
+4. Keep the root directory as the repository root so Vercel can read root `vercel.json`.
+5. Add env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS`.
+6. Set `CORS_ORIGINS` to `https://your-project.vercel.app` after the first deployment URL exists.
+7. The backend is mounted at `/backend`; Vercel injects `NEXT_PUBLIC_BACKEND_URL=/backend` for the frontend.
+8. Call deployed `/backend/admin/load-data` once to preload Supabase before sharing the app.
+
+For local development, keep using `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`.
 
 ## Data Loading
 
