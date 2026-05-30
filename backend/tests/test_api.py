@@ -71,18 +71,6 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_supabase_health_reports_missing_env_without_leaking_secret() -> None:
-    client = TestClient(app)
-    response = client.get("/health/supabase")
-    body = response.json()
-
-    assert response.status_code == 200
-    assert body["status"] == "error"
-    assert body["supabase_url_configured"] is False
-    assert body["supabase_key_configured"] is False
-    assert "sb_secret" not in str(body)
-
-
 def test_run_experiment_validation() -> None:
     app.dependency_overrides[get_repo] = lambda: FakeRepo()
     client = TestClient(app)

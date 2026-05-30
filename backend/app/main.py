@@ -38,36 +38,6 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/health/supabase")
-def supabase_health(settings: Settings = Depends(get_settings)) -> dict[str, object]:
-    diagnostics: dict[str, object] = {
-        "status": "checking",
-        "supabase_url_configured": bool(settings.supabase_url),
-        "supabase_key_configured": bool(settings.supabase_service_role_key),
-        "supabase_key_type": "unknown",
-    }
-
-    if settings.supabase_service_role_key.startswith("sb_secret_"):
-        diagnostics["supabase_key_type"] = "secret"
-    elif settings.supabase_service_role_key.startswith("sb_publishable_"):
-        diagnostics["supabase_key_type"] = "publishable"
-    elif settings.supabase_service_role_key.startswith("eyJ"):
-        diagnostics["supabase_key_type"] = "legacy_jwt"
-
-    try:
-        repo = Repository(get_supabase(settings))
-        status = repo.candle_status()
-    except Exception as exc:
-        diagnostics["status"] = "error"
-        diagnostics["error_type"] = type(exc).__name__
-        diagnostics["error"] = str(exc)
-        return diagnostics
-
-    diagnostics["status"] = "ok"
-    diagnostics["candle_count"] = status["candle_count"]
-    return diagnostics
-
-
 @app.post("/admin/load-data", response_model=LoadDataResponse)
 async def load_data(payload: LoadDataRequest, repo: Repository = Depends(get_repo)) -> LoadDataResponse:
     candles = await fetch_candles(payload.product_id, payload.granularity, payload.days)
