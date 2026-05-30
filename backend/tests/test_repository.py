@@ -45,3 +45,66 @@ def test_serialize_row_converts_datetimes_to_isoformat() -> None:
         "price": 100,
     }
 
+
+class FakeDeleteQuery:
+    def __init__(self):
+        self.deleted_id = None
+
+    def eq(self, key, value):
+        assert key == "id"
+        self.deleted_id = value
+        return self
+
+    def execute(self):
+        return None
+
+
+class FakeInsertQuery:
+    def __init__(self, table, client):
+        self.table = table
+        self.client = client
+
+    def execute(self):
+        if self.table == "experiments":
+            return type("Result", (), {"data": [{"id": "experiment-1"}]})()
+        if self.table == "trades":
+            raise RuntimeError("trade insert failed")
+        return type("Result", (), {"data": []})()
+
+
+class FakeTable:
+    def __init__(self, name, client):
+        self.name = name
+        self.client = client
+
+    def insert(self, rows):
+        return FakeInsertQuery(self.name, self.client)
+
+    def delete(self):
+        self.client.delete_query = FakeDeleteQuery()
+        return self.client.delete_query
+
+
+class FakeClient:
+    def __init__(self):
+        self.delete_query = None
+
+    def table(self, name):
+        return FakeTable(name, self)
+
+
+def test_create_experiment_deletes_partial_row_when_child_insert_fails() -> None:
+    client = FakeClient()
+    repo = Repository(client=client)
+
+    try:
+        repo.create_experiment(
+            params={"product_id": "BTC-USD"},
+            metrics={"trade_count": 1},
+            trades=[{"entry_time": datetime.now(timezone.utc)}],
+            equity_points=[],
+        )
+    except RuntimeError:
+        pass
+
+    assert client.delete_query.deleted_id == "experiment-1"

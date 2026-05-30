@@ -95,30 +95,45 @@ class Repository:
         experiment = self.client.table("experiments").insert(experiment_row).execute().data[0]
         experiment_id = experiment["id"]
 
-        if trades:
-            self.client.table("trades").insert(
-                [self._serialize_row({**trade, "experiment_id": experiment_id}) for trade in trades]
-            ).execute()
-
-        if equity_points:
-            for index in range(0, len(equity_points), 500):
-                self.client.table("equity_points").insert(
-                    [
-                        self._serialize_row({**point, "experiment_id": experiment_id})
-                        for point in equity_points[index : index + 500]
-                    ]
+        try:
+            if trades:
+                self.client.table("trades").insert(
+                    [self._serialize_row({**trade, "experiment_id": experiment_id}) for trade in trades]
                 ).execute()
+
+            if equity_points:
+                for index in range(0, len(equity_points), 500):
+                    self.client.table("equity_points").insert(
+                        [
+                            self._serialize_row({**point, "experiment_id": experiment_id})
+                            for point in equity_points[index : index + 500]
+                        ]
+                    ).execute()
+        except Exception:
+            self.client.table("experiments").delete().eq("id", experiment_id).execute()
+            raise
 
         return experiment
 
     def list_experiments(self) -> List[Dict[str, Any]]:
-        return (
+        rows = (
             self.client.table("experiments")
             .select("*")
             .order("created_at", desc=True)
             .execute()
             .data
         )
+        return [row for row in rows if self._experiment_has_equity(row["id"])]
+
+    def _experiment_has_equity(self, experiment_id: str) -> bool:
+        result = (
+            self.client.table("equity_points")
+            .select("id")
+            .eq("experiment_id", experiment_id)
+            .limit(1)
+            .execute()
+        )
+        return bool(result.data)
 
     def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         experiment_result = self.client.table("experiments").select("*").eq("id", experiment_id).maybe_single().execute()
